@@ -5,12 +5,25 @@ GROUP(-lgcc -lc -lnosys)
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0xf8000, LENGTH = 0x6000
-  RAM (rwx) :  ORIGIN = 0x200057b8, LENGTH = 0x3a848
+  FLASH (rx) : ORIGIN = 0xe1000, LENGTH = 0x1d000
+  RAM (rwx) :  ORIGIN = 0x20000008, LENGTH = 0x3fff8
   uicr_bootloader_start_address (r) : ORIGIN = 0x00000FF8, LENGTH = 0x4
   bootloader_settings_page (r) : ORIGIN = 0x000FF000, LENGTH = 0x1000
   uicr_mbr_params_page (r) : ORIGIN = 0x00000FFC, LENGTH = 0x4
   mbr_params_page (r) : ORIGIN = 0x000FE000, LENGTH = 0x1000
+}
+
+SECTIONS
+{
+  ctrlap : AT(0x10001208)
+  {
+    KEEP(*(ctrlap))
+  }
+
+  .private_key : AT(0x000E0000)
+  {
+    KEEP(*(.private_key))
+  }
 }
 
 SECTIONS
@@ -51,6 +64,12 @@ SECTIONS
   .mem_section_dummy_ram :
   {
   }
+  .fs_data :
+  {
+    PROVIDE(__start_fs_data = .);
+    KEEP(*(.fs_data))
+    PROVIDE(__stop_fs_data = .);
+  } > RAM
   .log_dynamic_data :
   {
     PROVIDE(__start_log_dynamic_data = .);
@@ -62,12 +81,6 @@ SECTIONS
     PROVIDE(__start_log_filter_data = .);
     KEEP(*(SORT(.log_filter_data*)))
     PROVIDE(__stop_log_filter_data = .);
-  } > RAM
-  .fs_data :
-  {
-    PROVIDE(__start_fs_data = .);
-    KEEP(*(.fs_data))
-    PROVIDE(__stop_fs_data = .);
   } > RAM
 
 } INSERT AFTER .data;
@@ -95,12 +108,6 @@ SECTIONS
     KEEP(*(SORT(.dfu_trans*)))
     PROVIDE(__stop_dfu_trans = .);
   } > FLASH
-    .svc_data :
-  {
-    PROVIDE(__start_svc_data = .);
-    KEEP(*(.svc_data))
-    PROVIDE(__stop_svc_data = .);
-  } > FLASH
   .log_const_data :
   {
     PROVIDE(__start_log_const_data = .);
@@ -113,41 +120,11 @@ SECTIONS
     KEEP(*(.nrf_balloc))
     PROVIDE(__stop_nrf_balloc = .);
   } > FLASH
-  .sdh_ble_observers :
-  {
-    PROVIDE(__start_sdh_ble_observers = .);
-    KEEP(*(SORT(.sdh_ble_observers*)))
-    PROVIDE(__stop_sdh_ble_observers = .);
-  } > FLASH
   .log_backends :
   {
     PROVIDE(__start_log_backends = .);
     KEEP(*(SORT(.log_backends*)))
     PROVIDE(__stop_log_backends = .);
-  } > FLASH
-  .sdh_req_observers :
-  {
-    PROVIDE(__start_sdh_req_observers = .);
-    KEEP(*(SORT(.sdh_req_observers*)))
-    PROVIDE(__stop_sdh_req_observers = .);
-  } > FLASH
-  .sdh_state_observers :
-  {
-    PROVIDE(__start_sdh_state_observers = .);
-    KEEP(*(SORT(.sdh_state_observers*)))
-    PROVIDE(__stop_sdh_state_observers = .);
-  } > FLASH
-  .sdh_stack_observers :
-  {
-    PROVIDE(__start_sdh_stack_observers = .);
-    KEEP(*(SORT(.sdh_stack_observers*)))
-    PROVIDE(__stop_sdh_stack_observers = .);
-  } > FLASH
-  .sdh_soc_observers :
-  {
-    PROVIDE(__start_sdh_soc_observers = .);
-    KEEP(*(SORT(.sdh_soc_observers*)))
-    PROVIDE(__stop_sdh_soc_observers = .);
   } > FLASH
 
 } INSERT AFTER .text
