@@ -1041,7 +1041,7 @@
 // <i> When signed updates are required, version checking should always be enabled.
 
 #ifndef NRF_DFU_APP_DOWNGRADE_PREVENTION
-#define NRF_DFU_APP_DOWNGRADE_PREVENTION 0
+#define NRF_DFU_APP_DOWNGRADE_PREVENTION 1
 #endif
 
 // <q> NRF_DFU_EXTERNAL_APP_VERSIONING  - Require versioning for external applications.
@@ -1081,7 +1081,7 @@
 
 
 #ifndef NRF_DFU_REQUIRE_SIGNED_APP_UPDATE
-#define NRF_DFU_REQUIRE_SIGNED_APP_UPDATE 0
+#define NRF_DFU_REQUIRE_SIGNED_APP_UPDATE 1
 #endif
 
 // <q> NRF_DFU_SINGLE_BANK_APP_UPDATES  - Place the application and the SoftDevice directly where they are supposed to be.
@@ -2003,7 +2003,7 @@
 // <i> Note: This value is not editable in Configuration Wizard.
 // <i> List of product names that is defined the same way like in @ref APP_USBD_STRINGS_MANUFACTURER.
 #ifndef APP_USBD_STRINGS_PRODUCT
-#define APP_USBD_STRINGS_PRODUCT APP_USBD_STRING_DESC("Open DFU Bootloader")
+#define APP_USBD_STRINGS_PRODUCT APP_USBD_STRING_DESC("Secure DFU Bootloader")
 #endif
 
 // </e>
