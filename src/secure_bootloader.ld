@@ -5,7 +5,7 @@ GROUP(-lgcc -lc -lnosys)
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0xe1000, LENGTH = 0x1d000
+  FLASH (rx) : ORIGIN = 0xe0000, LENGTH = 0x1e000
   RAM (rwx) :  ORIGIN = 0x20000008, LENGTH = 0x3fff8
   uicr_bootloader_start_address (r) : ORIGIN = 0x00000FF8, LENGTH = 0x4
   bootloader_settings_page (r) : ORIGIN = 0x000FF000, LENGTH = 0x1000
@@ -20,7 +20,7 @@ SECTIONS
     KEEP(*(ctrlap))
   }
 
-  .private_key : AT(0x000E0000)
+  .private_key : AT(0x000FD000)
   {
     KEEP(*(.private_key))
   }
