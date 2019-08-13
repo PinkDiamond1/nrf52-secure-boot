@@ -15,19 +15,6 @@ MEMORY
 
 SECTIONS
 {
-  ctrlap : AT(0x10001208)
-  {
-    KEEP(*(ctrlap))
-  }
-
-  .private_key : AT(0x000FD000)
-  {
-    KEEP(*(.private_key))
-  }
-}
-
-SECTIONS
-{
   . = ALIGN(4);
   .uicr_bootloader_start_address :
   {
@@ -129,5 +116,16 @@ SECTIONS
 
 } INSERT AFTER .text
 
+SECTIONS
+{
+  .ctrlap : AT(0x10001208)
+  {
+    KEEP(*(.ctrlap))
+  }
 
+  .private_key : AT(0x000FD000)
+  {
+    KEEP(*(.private_key))
+  }
+}
 INCLUDE "nrf_common.ld"

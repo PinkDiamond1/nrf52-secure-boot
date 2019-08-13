@@ -7,15 +7,15 @@
 * an "section" we can reference it in our linkerscript and write into the
 * register while flashing the hardware.
 */
-//#define AP_PROTECT 0xFFFFFF00
-//const unsigned int *approtect_set __attribute__((section("ctrlap"))) = (unsigned int *) AP_PROTECT;
+#define AP_PROTECT 0xFFFFFF00
+const unsigned int *approtect_set __attribute__((section(".ctrlap"))) __attribute__((used))= (unsigned int *) AP_PROTECT;
 
 #define PRIVATE_KEY_0 0xDEADBEEF
 #define PRIVATE_KEY_1 0xDEADBEEF
 #define PRIVATE_KEY_2 0xDEADBEEF
 #define PRIVATE_KEY_3 0xDEADBEEF
 
-const unsigned int *my_private_key[4] __attribute__((section(".private_key"))) = {
+const unsigned int *my_private_key[4] __attribute__((section(".private_key")))= {
   (unsigned int *) PRIVATE_KEY_0,
   (unsigned int *) PRIVATE_KEY_1,
   (unsigned int *) PRIVATE_KEY_2,
