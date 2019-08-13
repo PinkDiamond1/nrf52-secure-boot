@@ -247,7 +247,7 @@ include $(TEMPLATE_PATH)/Makefile.common
 
 $(foreach target, $(TARGETS), $(call define_target, $(target)))
 
-.PHONY: flash flash_mbr flash_app erase debug debug_server generate_settings
+.PHONY: flash flash_mbr flash_app erase debug debug_server generate_settings generate_debug_key
 
 # Flash the program
 flash: default
@@ -282,6 +282,10 @@ generate_settings:
 
 erase:
 	nrfjprog -f nrf52 --eraseall
+
+generate_debug_key:
+	nrfutil keys generate $(OUTPUT_DIRECTORY)/priv_key.pem
+	nrfutil keys display --key pk --format code $(OUTPUT_DIRECTORY)/priv_key.pem > $(SRC_DIR)/dfu_public_key.c
 
 SDK_CONFIG_FILE := ../config/sdk_config.h
 CMSIS_CONFIG_TOOL := $(SDK_ROOT)/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar
