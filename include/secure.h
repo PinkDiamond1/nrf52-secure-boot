@@ -12,6 +12,6 @@ extern unsigned int _device_secrets_length;
 #define DEVICE_SECRET_SIZE (uint32_t) &_device_secrets_length
 #endif
 
-void copy_kdr();
+uint32_t copy_kdr();
 
 #endif
