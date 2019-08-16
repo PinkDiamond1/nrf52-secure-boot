@@ -8,6 +8,7 @@ MEMORY
   FLASH (rx) : ORIGIN = 0x000E1000, LENGTH = 0x1D000
   RAM (rwx) :  ORIGIN = 0x20000008, LENGTH = 0x3FFF8
   DEVICE_SECRETS(!rwx) : ORIGIN = 0x000E0000, LENGTH = 0x1000
+  CTRLAP(rw) : ORIGIN = 0x10001208, LENGTH = 0x4
   uicr_bootloader_start_address (r) : ORIGIN = 0x00000FF8, LENGTH = 0x4
   bootloader_settings_page (r) : ORIGIN = 0x000FF000, LENGTH = 0x1000
   uicr_mbr_params_page (r) : ORIGIN = 0x00000FFC, LENGTH = 0x4
@@ -119,10 +120,10 @@ SECTIONS
 
 SECTIONS
 {
-  .ctrlap : AT(0x10001208)
+  .ctrlap :
   {
     KEEP(*(.ctrlap))
-  }
+  } > CTRLAP
 
   .device_secrets :
   {
@@ -130,6 +131,12 @@ SECTIONS
   } > DEVICE_SECRETS
 }
 
+/*
+* These two variables are not intialized but only there address is allocated or
+* assigned. Relates to the fact that these both variables are memory definitions
+* So to use the address as a variable, reference it using '&' to get the
+* allocated address.
+*/
 _device_secrets_address = ORIGIN(DEVICE_SECRETS);
 _device_secrets_length = LENGTH(DEVICE_SECRETS);
 

@@ -15,14 +15,14 @@
 * 1. ALLOW_DEBUGGER_ACCESS
 * 2. DISALLOW_DEBUGGER_ACCESS
 */
-const unsigned int *approtect_set __attribute__((section(".ctrlap"))) __attribute__((used))= (unsigned int *) ALLOW_DEBUGGER_ACCESS;
+const uint32_t approtect_set __attribute__((section(".ctrlap"))) __attribute__((used)) = ALLOW_DEBUGGER_ACCESS;
 
 /*
 * Available Options:
 * 1. Device Secret is already on flash at 0x000E0000 - ALREADY_WRITTEN
 * 2. Device Secret must be generated and written on flash - GENERATE_AND_WRITE
 */
-const uint32_t *secrets_flag_write __attribute__((section(".device_secrets"))) __attribute__((used)) = (uint32_t *) GENERATE_AND_WRITE;
+const uint32_t secrets_flag_write __attribute__((section(".device_secrets"))) __attribute__((used)) = ALREADY_WRITTEN;
 
 /*
 * The RND_STATE structure holds the seed, entropy and other info related to
@@ -110,24 +110,24 @@ static uint32_t convert_to_word(uint8_t* byte_array) {
 * This function writes the first "word" from a "byte" array into the flash. It
 * writes the first 4 bytes(word).
 */
-static void flash_write(uint32_t* address, uint32_t src)
-{
-    // Enable write.
-    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
-    {
-    }
-
-    ((uint32_t*)address)[0] = src;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
-    {
-    }
-
-    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren;
-    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
-    {
-    }
-}
+// static void flash_write(uint32_t* address, uint32_t src)
+// {
+//     // Enable write.
+//     NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen;
+//     while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+//     {
+//     }
+//
+//     address[0] = src;
+//     while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+//     {
+//     }
+//
+//     NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren;
+//     while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+//     {
+//     }
+// }
 
 /*
 * This function copies the device root key from a flash section and copies into
@@ -156,17 +156,17 @@ uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
   }
 
   //check if the flash region contains a key
-  uint32_t *device_secrets = ((uint32_t *)(0x000E0000));
+  uint32_t *device_secrets = ((uint32_t *)(DEVICE_SECRET_ADDRESS));
   uint32_t secrets_flag_read = device_secrets[0];
 
-  if (secrets_flag_read == 1UL) {
+  if (secrets_flag_read == ALREADY_WRITTEN) {
     //copy key from flash to KDR registers
     NRF_CC_HOST_RGF->HOST_IOT_KDR0 = device_secrets[1];
     NRF_CC_HOST_RGF->HOST_IOT_KDR1 = device_secrets[2];
     NRF_CC_HOST_RGF->HOST_IOT_KDR2 = device_secrets[3];
     NRF_CC_HOST_RGF->HOST_IOT_KDR3 = device_secrets[4];
   }
-  else if (secrets_flag_read == 2UL) {
+  else if (secrets_flag_read == GENERATE_AND_WRITE) {
     //generate random key
     uint16_t rnd_bytes_size = 16;
     uint8_t rnd_bytes[rnd_bytes_size];
@@ -174,13 +174,13 @@ uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
     CRYS_RND_GenerateVector (&rnd_state, rnd_bytes_size, rnd_bytes);
 
     //store the key onto the flash
-    flash_write(&device_secrets[1], convert_to_word(&rnd_bytes[0]));
-    flash_write(&device_secrets[2], convert_to_word(&rnd_bytes[4]));
-    flash_write(&device_secrets[3], convert_to_word(&rnd_bytes[8]));
-    flash_write(&device_secrets[4], convert_to_word(&rnd_bytes[12]));
+    //flash_write(&device_secrets[1], convert_to_word(&rnd_bytes[0]));
+    //flash_write(&device_secrets[2], convert_to_word(&rnd_bytes[4]));
+    //flash_write(&device_secrets[3], convert_to_word(&rnd_bytes[8]));
+    //flash_write(&device_secrets[4], convert_to_word(&rnd_bytes[12]));
 
     //modify the flag on flash
-    flash_write(&device_secrets[0], 1UL);
+    //flash_write(&device_secrets[0], ALREADY_WRITTEN);
 
     //copy key into KDR registers
     NRF_CC_HOST_RGF->HOST_IOT_KDR0 = convert_to_word(&rnd_bytes[0]);
