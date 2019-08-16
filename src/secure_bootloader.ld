@@ -124,9 +124,9 @@ SECTIONS
     KEEP(*(.ctrlap))
   }
 
-  .private_key :
+  .device_secrets :
   {
-    KEEP(*(.private_key))
+    KEEP(*(.device_secrets))
   } > DEVICE_SECRETS
 }
 

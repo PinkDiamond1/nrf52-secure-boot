@@ -6,21 +6,20 @@
 /*
 * Set the read back protection using Control Access Ports. By specifying it as
 * an "section" we can reference it in our linkerscript and write into the
-* register while flashing the hardware. Check secure.h for configuration.
+* register while flashing the hardware.
+* Available Options:
+* 1. ALLOW_DEBUGGER_ACCESS
+* 2. DISALLOW_DEBUGGER_ACCESS
 */
-const unsigned int *approtect_set __attribute__((section(".ctrlap"))) __attribute__((used))= (unsigned int *) AP_PROTECT;
+const unsigned int *approtect_set __attribute__((section(".ctrlap"))) __attribute__((used))= (unsigned int *) ALLOW_DEBUGGER_ACCESS;
 
-#define PRIVATE_KEY_0 0xDEADBEEF
-#define PRIVATE_KEY_1 0xDEADBEEF
-#define PRIVATE_KEY_2 0xDEADBEEF
-#define PRIVATE_KEY_3 0xDEADBEEF
-
-const unsigned int *my_private_key[4] __attribute__((section(".private_key")))= {
-  (unsigned int *) PRIVATE_KEY_0,
-  (unsigned int *) PRIVATE_KEY_1,
-  (unsigned int *) PRIVATE_KEY_2,
-  (unsigned int *) PRIVATE_KEY_3
-};
+/*
+* Available Options:
+* 1. Device Secret is already on flash at 0x000E0000 - ALREADY_WRITTEN
+* 2. Device Secret must be generated and written on flash - GENERATE_AND_WRITE
+*/
+#define MOCK_ALREADY_WRITTEN 0x00000001
+const uint32_t *secrets_flag_write __attribute__((section(".device_secrets"))) __attribute__((used)) = (uint32_t *) MOCK_ALREADY_WRITTEN;
 
 /*
 * This function copies the device root key from a flash section and copies into
@@ -42,11 +41,20 @@ uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
     return NRF_ERROR_INTERNAL;
   }
 
-  //copy key from flash to KDR registers
-  NRF_CC_HOST_RGF->HOST_IOT_KDR0 = *((uint32_t *)(DEVICE_SECRET_ADDRESS));
-  NRF_CC_HOST_RGF->HOST_IOT_KDR1 = *((uint32_t *)(DEVICE_SECRET_ADDRESS + 0x00000004));
-  NRF_CC_HOST_RGF->HOST_IOT_KDR2 = *((uint32_t *)(DEVICE_SECRET_ADDRESS + 0x00000008));
-  NRF_CC_HOST_RGF->HOST_IOT_KDR3 = *((uint32_t *)(DEVICE_SECRET_ADDRESS + 0x0000000C));
+  //check if the flash region contains a key
+  uint32_t *device_secrets = ((uint32_t *)(0x000E0000));
+  uint32_t secrets_flag_read = device_secrets[0];
+
+  if (secrets_flag_read == 1UL) {
+    //copy key from flash to KDR registers
+    NRF_CC_HOST_RGF->HOST_IOT_KDR0 = device_secrets[1];
+    NRF_CC_HOST_RGF->HOST_IOT_KDR1 = device_secrets[2];
+    NRF_CC_HOST_RGF->HOST_IOT_KDR2 = device_secrets[3];
+    NRF_CC_HOST_RGF->HOST_IOT_KDR3 = device_secrets[4];
+  }
+  else {
+    return NRF_ERROR_INTERNAL;
+  }
 
   //check if the key is retained in the registers
   if (NRF_CC_HOST_RGF->HOST_IOT_KDR0 != 1UL) {
