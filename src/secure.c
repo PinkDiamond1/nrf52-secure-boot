@@ -6,9 +6,8 @@
 /*
 * Set the read back protection using Control Access Ports. By specifying it as
 * an "section" we can reference it in our linkerscript and write into the
-* register while flashing the hardware.
+* register while flashing the hardware. Check secure.h for configuration.
 */
-#define AP_PROTECT 0xFFFFFFFF
 const unsigned int *approtect_set __attribute__((section(".ctrlap"))) __attribute__((used))= (unsigned int *) AP_PROTECT;
 
 #define PRIVATE_KEY_0 0xDEADBEEF
@@ -23,14 +22,20 @@ const unsigned int *my_private_key[4] __attribute__((section(".private_key")))= 
   (unsigned int *) PRIVATE_KEY_3
 };
 
-uint32_t copy_kdr() {
+/*
+* This function copies the device root key from a flash section and copies into
+* the secure RAM of the cryptocell (a.k.a KDR registers). This function is
+* attributed to NOT be optimized because it invovles a register read/write delay
+* which must be handled with assembly code.
+*/
+uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
 
   NRF_CRYPTOCELL->ENABLE = 1;
 
   //set life cycle state to secure so you can write into KDR registers only once.
   NRF_CC_HOST_RGF->HOST_IOT_LCS = 2UL;
 
-  for(long k=0;k<1000000;k++);
+  __asm("nop;nop;nop;nop;nop;nop;nop");
 
   //check if LCS_VALID_FLAG(read-only) is set
   if (!(NRF_CC_HOST_RGF->HOST_IOT_LCS & (1<<8))) {
@@ -42,8 +47,6 @@ uint32_t copy_kdr() {
   NRF_CC_HOST_RGF->HOST_IOT_KDR1 = *((uint32_t *)(DEVICE_SECRET_ADDRESS + 0x00000004));
   NRF_CC_HOST_RGF->HOST_IOT_KDR2 = *((uint32_t *)(DEVICE_SECRET_ADDRESS + 0x00000008));
   NRF_CC_HOST_RGF->HOST_IOT_KDR3 = *((uint32_t *)(DEVICE_SECRET_ADDRESS + 0x0000000C));
-
-  for(long k=0;k<1000000;k++);
 
   //check if the key is retained in the registers
   if (NRF_CC_HOST_RGF->HOST_IOT_KDR0 != 1UL) {
