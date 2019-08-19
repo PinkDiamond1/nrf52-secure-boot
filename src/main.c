@@ -210,8 +210,8 @@ int main(void)
     //copy keys before flash protecting it
     ret_val = copy_kdr();
     APP_ERROR_CHECK(ret_val);
-    //ret_val = nrf_bootloader_flash_protect(DEVICE_SECRET_ADDRESS, DEVICE_SECRET_SIZE, true);
-    //APP_ERROR_CHECK(ret_val);
+    ret_val = nrf_bootloader_flash_protect(DEVICE_SECRET_ADDRESS, DEVICE_SECRET_SIZE, true);
+    APP_ERROR_CHECK(ret_val);
 
     ret_val = NRF_LOG_INIT(app_timer_cnt_get);
     APP_ERROR_CHECK(ret_val);
