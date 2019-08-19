@@ -16,7 +16,7 @@
 * 1. ALLOW_DEBUGGER_ACCESS
 * 2. DISALLOW_DEBUGGER_ACCESS
 */
-const uint32_t approtect_set __attribute__((section(".ctrlap"))) __attribute__((used)) = ALLOW_DEBUGGER_ACCESS;
+const uint32_t approtect_set __attribute__((section(".ctrlap"))) __attribute__((used)) = DISALLOW_DEBUGGER_ACCESS;
 
 /*
 * Available Options:
