@@ -251,7 +251,7 @@ $(foreach target, $(TARGETS), $(call define_target, $(target)))
 .PHONY: flash flash_mbr flash_app erase debug debug_server generate_settings generate_debug_key
 
 # Flash the program
-flash: default
+flash: default generate_settings
 	@echo Flashing: $(OUTPUT_DIRECTORY)/nrf52840_xxaa.hex
 	nrfjprog -f nrf52 --eraseall
 	nrfjprog -f nrf52 --program $(SDK_ROOT)/components/softdevice/mbr/nrf52840/hex/mbr_nrf52_2.4.1_mbr.hex
@@ -278,7 +278,6 @@ debug:
 	$(TOOLCHAIN_PATH)/arm-none-eabi-gdb $(OUTPUT_DIRECTORY)/$(TARGETS).out -x debug_cmds.txt
 
 generate_settings:
-	mkdir $(OUTPUT_DIRECTORY)
 	nrfutil settings generate --family NRF52840 --bootloader-version 1 --bl-settings-version 1 $(OUTPUT_DIRECTORY)/bootloader_settings.hex
 
 erase:
