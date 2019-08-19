@@ -1,6 +1,6 @@
 /* NRF52840 Hardware Interface Library. */
 #include "nrf52840.h"
-#include <nrfx.h>
+#include <string.h>
 #include "secure.h"
 #include "nrf_error.h"
 #include "crys_rnd.h"
@@ -23,7 +23,7 @@ const uint32_t approtect_set __attribute__((section(".ctrlap"))) __attribute__((
 * 1. Device Secret is already on flash at 0x000E0000 - ALREADY_WRITTEN
 * 2. Device Secret must be generated and written on flash - GENERATE_AND_WRITE
 */
-const uint32_t secrets_flag_write __attribute__((section(".device_secrets"))) __attribute__((used)) = ALREADY_WRITTEN;
+const uint32_t private_key_option __attribute__((section(".device_secrets"))) __attribute__((used)) = GENERATE_AND_WRITE;
 
 /*
 * The RND_STATE structure holds the seed, entropy and other info related to
@@ -128,12 +128,8 @@ uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
   //set life cycle state to secure so you can write into KDR registers only once.
   NRF_CC_HOST_RGF->HOST_IOT_LCS = 2UL;
 
-  __asm("nop;nop;nop;nop;nop;nop;nop");
-
-  //check if LCS_VALID_FLAG(read-only) is set
-  if (!(NRF_CC_HOST_RGF->HOST_IOT_LCS & (1<<8))) {
-    return NRF_ERROR_INTERNAL;
-  }
+  //check until LCS_VALID_FLAG(read-only) is set
+  while (!(NRF_CC_HOST_RGF->HOST_IOT_LCS & (1<<8))) {;}
 
   //check if the flash region contains a key
   uint32_t *device_secrets = ((uint32_t *)(DEVICE_SECRET_ADDRESS));
@@ -153,41 +149,52 @@ uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
 
     ret_code = CRYS_RND_GenerateVector (&rnd_state, rnd_bytes_size, rnd_bytes);
 
-    if(ret_code != CRYS_OK) {
+    if (ret_code != CRYS_OK) {
       return ret_code;
     }
+
+    //create a buffer which holds the new flag value and the random bytes
+    uint32_t device_page_buffer_size = (uint32_t)rnd_bytes_size + 4;
+    uint8_t device_page_buffer[device_page_buffer_size];
+
+    //after generating random number, we also want to change the flag
+    uint32_t secrets_flag_change = ALREADY_WRITTEN;
+
+    //copy the flag change value and the random number.
+    memcpy(device_page_buffer, &secrets_flag_change, sizeof(uint32_t));
+    memcpy(device_page_buffer + sizeof(secrets_flag_change), rnd_bytes, sizeof(rnd_bytes));
 
     //store the key onto the flash
-    ret_code = nrf_dfu_flash_store((uint32_t)&device_secrets[1], rnd_bytes, (uint32_t)rnd_bytes_size, NULL);
+    ret_code = nrf_dfu_flash_erase(DEVICE_SECRET_ADDRESS, 1, NULL);
 
-    if(ret_code != NRF_SUCCESS) {
+    if (ret_code != NRF_SUCCESS) {
       return ret_code;
     }
 
-    //modify the flag on flash
-    uint32_t change_value = ALREADY_WRITTEN;
-    ret_code = nrf_dfu_flash_store(DEVICE_SECRET_ADDRESS, &change_value, 4, NULL);
+    ret_code = nrf_dfu_flash_store(DEVICE_SECRET_ADDRESS, device_page_buffer, device_page_buffer_size, NULL);
 
-    if(ret_code != NRF_SUCCESS) {
+    if (ret_code != NRF_SUCCESS) {
       return ret_code;
     }
+
+    //clear off the device page buffer
+    memset(device_page_buffer, 0, sizeof(device_page_buffer));
 
     //copy key into KDR registers
     NRF_CC_HOST_RGF->HOST_IOT_KDR0 = convert_to_word(&rnd_bytes[0]);
     NRF_CC_HOST_RGF->HOST_IOT_KDR1 = convert_to_word(&rnd_bytes[4]);
     NRF_CC_HOST_RGF->HOST_IOT_KDR2 = convert_to_word(&rnd_bytes[8]);
     NRF_CC_HOST_RGF->HOST_IOT_KDR3 = convert_to_word(&rnd_bytes[12]);
+
+    //clear off the value in the rnd_bytes buffer
+    memset(rnd_bytes, 0, sizeof(rnd_bytes));
   }
   else {
     return NRF_ERROR_INTERNAL;
   }
 
-  __asm("nop;nop;nop;nop;nop;nop;nop");
-
   //check if the key is retained in the registers
-  if (NRF_CC_HOST_RGF->HOST_IOT_KDR0 != 1UL) {
-    return NRF_ERROR_INTERNAL;
-  }
+  while (NRF_CC_HOST_RGF->HOST_IOT_KDR0 != 1UL) {;}
 
   ret_code = crypto_deinit();
 
