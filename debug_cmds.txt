@@ -4,4 +4,3 @@ mon flash download=1
 load
 break main
 mon reset 0
-continue

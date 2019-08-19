@@ -15,6 +15,9 @@ extern unsigned int _device_secrets_length;
 #define DEVICE_SECRET_SIZE (uint32_t) &_device_secrets_length
 #endif
 
+#define ALREADY_WRITTEN 0x00000001
+#define GENERATE_AND_WRITE 0x00000002
+
 uint32_t copy_kdr();
 
 #endif
