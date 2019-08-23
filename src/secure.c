@@ -1,20 +1,12 @@
-/* Crypto Libraries*/
-#include "crys_ecpki_build.h"
-#include "crys_ecpki_kg.h" //key generation
-#include "crys_ecpki_domain.h"
-#include "crys_rnd.h"
-
-/* SaSi Libraries */
-#include "ssi_pal_mem.h"
-#include "sns_silib.h"
-
 /* NRF52840 Hardware Interface Library. */
 #include "nrf52840.h"
-#include "nrf_dfu_flash.h"
-
-#include "nrf_error.h"
-
+#include <string.h>
 #include "secure.h"
+#include "nrf_error.h"
+#include "crys_rnd.h"
+#include "ssi_pal_mem.h"
+#include "sns_silib.h"
+#include "nrf_dfu_flash.h"
 
 /*
 * Set the read back protection using Control Access Ports. By specifying it as
@@ -110,40 +102,6 @@ uint32_t crypto_deinit() {
   return NRF_SUCCESS;
 }
 
-/*
-* Outputs keys to the Real time terminal in big-endioan format for debugging.
-* @param key            pointer to the double-byte(uint32) array which holds the key
-* @param print_message  pointer to the prefix char array (string literal)
-*/
-int generate_keys(
-  CRYS_ECPKI_UserPrivKey_t* priv_key,
-  CRYS_ECPKI_UserPublKey_t* publ_key
-){
-  CRYS_ECPKI_KG_TempData_t temp_buff;
-  CRYS_ECPKI_KG_FipsContext_t temp_fips_buff;
-  SaSiRndGenerateVectWorkFunc_t rnd_generate_func = CRYS_RND_GenerateVector;
-
-  const CRYS_ECPKI_Domain_t *ecc_domain_p = CRYS_ECPKI_GetEcDomain(CRYS_ECPKI_DomainID_secp256k1);
-
-  SaSi_PalMemSetZero(&temp_buff, sizeof(temp_buff));
-
-  /* Generate a pair of ECC keys for the secp256k1 standard */
-  int ret = CRYS_ECPKI_GenKeyPair (
-    &rnd_state,
-    rnd_generate_func,
-    ecc_domain_p,
-    priv_key,
-    publ_key,
-    &temp_buff,
-    &temp_fips_buff
-  );
-
-  if (ret != CRYS_OK)
-    return ret;
-
-  return ret;
-}
-
 static uint32_t convert_to_word(uint8_t* byte_array) {
   uint32_t converted_word = byte_array[0] | (byte_array[1] << 8) | (byte_array[2] << 16) | (byte_array[3] << 24);
   return converted_word;
@@ -173,34 +131,21 @@ uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
   //check until LCS_VALID_FLAG(read-only) is set
   while (!(NRF_CC_HOST_RGF->HOST_IOT_LCS & (1<<8))) {;}
 
+  //check if the flash region contains a key
   uint32_t *device_secrets = ((uint32_t *)(DEVICE_SECRET_ADDRESS));
   uint32_t secrets_flag_read = device_secrets[0];
 
-  //check if the flash region contains a key
   if (secrets_flag_read == ALREADY_WRITTEN) {
     //copy key from flash to KDR registers
     NRF_CC_HOST_RGF->HOST_IOT_KDR0 = device_secrets[1];
     NRF_CC_HOST_RGF->HOST_IOT_KDR1 = device_secrets[2];
     NRF_CC_HOST_RGF->HOST_IOT_KDR2 = device_secrets[3];
     NRF_CC_HOST_RGF->HOST_IOT_KDR3 = device_secrets[4];
-
-    //check if the key is retained in the registers
-    while (NRF_CC_HOST_RGF->HOST_IOT_KDR0 != 1UL) {;}
-
-    //copy the ECC key from flash to Reserved RAM
-    SaSi_PalMemCopy((CRYS_ECPKI_UserPrivKey_t *)0x2003F000, &device_secrets[5], sizeof(CRYS_ECPKI_UserPrivKey_t));
   }
   else if (secrets_flag_read == GENERATE_AND_WRITE) {
     //generate random key
     uint16_t rnd_bytes_size = 16;
     uint8_t rnd_bytes[rnd_bytes_size];
-
-    //after generating random number, we also want to change the flag
-    uint32_t secrets_flag_change = ALREADY_WRITTEN;
-
-    //ecc key structures
-    CRYS_ECPKI_UserPrivKey_t private_key;
-    CRYS_ECPKI_UserPublKey_t public_key;
 
     ret_code = CRYS_RND_GenerateVector (&rnd_state, rnd_bytes_size, rnd_bytes);
 
@@ -208,49 +153,18 @@ uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
       return ret_code;
     }
 
-    ret_code = generate_keys(&private_key, &public_key);
-
-    if(ret_code != CRYS_OK) {
-      return ret_code;
-    }
-
-    //TODO:ENCRYPT PRIVATE KEY
-    /* IMPORTANT:
-    * currently the nRF5 SDK does not support the use of device root key
-    * cryptographic functions
-    */
-
     //create a buffer which holds the new flag value and the random bytes
-    uint32_t device_page_buffer_size = (uint32_t)rnd_bytes_size + sizeof(secrets_flag_change) + sizeof(private_key);
+    uint32_t device_page_buffer_size = (uint32_t)rnd_bytes_size + 4;
     uint8_t device_page_buffer[device_page_buffer_size];
 
+    //after generating random number, we also want to change the flag
+    uint32_t secrets_flag_change = ALREADY_WRITTEN;
+
     //copy the flag change value and the random number.
-    SaSi_PalMemCopy(device_page_buffer, &secrets_flag_change, sizeof(uint32_t));
-    SaSi_PalMemCopy(device_page_buffer + sizeof(secrets_flag_change), rnd_bytes, sizeof(rnd_bytes));
-    SaSi_PalMemCopy(
-      device_page_buffer + sizeof(secrets_flag_change) + sizeof(rnd_bytes),
-      &private_key,
-      sizeof(private_key));
+    memcpy(device_page_buffer, &secrets_flag_change, sizeof(uint32_t));
+    memcpy(device_page_buffer + sizeof(secrets_flag_change), rnd_bytes, sizeof(rnd_bytes));
 
-    //copy key into KDR registers
-    NRF_CC_HOST_RGF->HOST_IOT_KDR0 = convert_to_word(&rnd_bytes[0]);
-    NRF_CC_HOST_RGF->HOST_IOT_KDR1 = convert_to_word(&rnd_bytes[4]);
-    NRF_CC_HOST_RGF->HOST_IOT_KDR2 = convert_to_word(&rnd_bytes[8]);
-    NRF_CC_HOST_RGF->HOST_IOT_KDR3 = convert_to_word(&rnd_bytes[12]);
-
-    //check if the key is retained in the registers
-    while (NRF_CC_HOST_RGF->HOST_IOT_KDR0 != 1UL) {;}
-
-    //clear off the value in the rnd_bytes buffer
-    SaSi_PalMemSetZero(rnd_bytes, sizeof(rnd_bytes));
-
-    //copy the encrypted key onto the reserved RAM
-    SaSi_PalMemCopy((CRYS_ECPKI_UserPrivKey_t *)0x2003F000, &private_key, sizeof(private_key));
-
-    //erase the key in the general RAM
-    SaSi_PalMemSetZero(&private_key, sizeof(private_key));
-
-    //store the device secrets onto the flash. Erase and then Flash
+    //store the key onto the flash
     ret_code = nrf_dfu_flash_erase(DEVICE_SECRET_ADDRESS, 1, NULL);
 
     if (ret_code != NRF_SUCCESS) {
@@ -264,11 +178,23 @@ uint32_t __attribute__((optimize("-O0"))) copy_kdr() {
     }
 
     //clear off the device page buffer
-    SaSi_PalMemSetZero(device_page_buffer, sizeof(device_page_buffer));
+    memset(device_page_buffer, 0, sizeof(device_page_buffer));
+
+    //copy key into KDR registers
+    NRF_CC_HOST_RGF->HOST_IOT_KDR0 = convert_to_word(&rnd_bytes[0]);
+    NRF_CC_HOST_RGF->HOST_IOT_KDR1 = convert_to_word(&rnd_bytes[4]);
+    NRF_CC_HOST_RGF->HOST_IOT_KDR2 = convert_to_word(&rnd_bytes[8]);
+    NRF_CC_HOST_RGF->HOST_IOT_KDR3 = convert_to_word(&rnd_bytes[12]);
+
+    //clear off the value in the rnd_bytes buffer
+    memset(rnd_bytes, 0, sizeof(rnd_bytes));
   }
   else {
     return NRF_ERROR_INTERNAL;
   }
+
+  //check if the key is retained in the registers
+  while (NRF_CC_HOST_RGF->HOST_IOT_KDR0 != 1UL) {;}
 
   ret_code = crypto_deinit();
 
