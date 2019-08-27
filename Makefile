@@ -278,7 +278,7 @@ debug:
 	$(TOOLCHAIN_PATH)/arm-none-eabi-gdb $(OUTPUT_DIRECTORY)/$(TARGETS).out -x debug_cmds.txt
 
 generate_settings:
-	nrfutil settings generate --family NRF52840 --bootloader-version 1 --bl-settings-version 1 $(OUTPUT_DIRECTORY)/bootloader_settings.hex
+	nrfutil settings generate --family NRF52840 --bootloader-version 100 --bl-settings-version 1 $(OUTPUT_DIRECTORY)/bootloader_settings.hex
 
 erase:
 	nrfjprog -f nrf52 --eraseall
