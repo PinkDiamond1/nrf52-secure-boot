@@ -1,11 +1,15 @@
 ## NRF52840 Secure Bootloader
 
+NRF52840's cryptocell implementation provides different accelerators for crypto operations like SHA-2, Random Number Generation, Elliptic Curve Multiplication etc. although it does not provide resources or machanisms for handling keys and other device secrets. Due to this drawback and for obvious reasons NRF52840 must be equipped with a secure bootloader that handles device secrets along with Device Firmware Upgrades(DFU).
+
+> The current version of the bootloader supports firmware upgrades via USB. Every update must be signed and versioned properly. The DFU process and firmware signing process is best explained [here](https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.sdk5.v15.0.0%2Flib_bootloader_modules.html). (more on versioning below)
+
 #### Memory mapping and Device Secrets
 ![memory](https://git.slock.it/hardware/freertos/nrf52-secure-boot/raw/assets/assets/Memory%20Mapping.png)
 
-This bootloader provides two options for device secrets either you can generate your own key and burn it into the device secrets region or a random key can be generated for you. The choice is determined by the first word in the device secrets page whcih is the device secrets flag. When the flag is set to `1` it indicates that the key has been already written into the device secrets page and when it is set to `2` it indicates that a key must be generated and stored onto the flash.
+The current version of the bootloader provides two options for device secrets either you can generate your own key and burn it into the device secrets region or a random key can be generated for you. The choice is determined by the first word in the device secrets page whcih is the device secrets flag. When the flag is set to `1` it indicates that the key has been already written into the device secrets page and when it is set to `2` it indicates that a key must be generated and stored onto the flash.
 
->If you are generating your own root key then make sure you burn the key starting from address 0x000E0004. Do not overwrite the flag -> will cause the bootloader to stall.
+**NOTE:** *If you are generating your own root key then make sure you burn the key starting from address 0x000E0004. Do not overwrite the flag -> will cause the bootloader to stall.*
 
 ```
 file: secure.h
@@ -48,4 +52,13 @@ const uint32_t approtect_set __attribute__((section(".ctrlap"))) __attribute__((
 #### Versioning
 The bootloader saves the versions of itself and the application in the Boot Settings Page. This is done to prevent downgrading attacks during the firmware upgrade process. The DFU(Device Firmware Upgrade) feature of the bootloader only accepts a new update if the signed version is greater than the current version. This means that firmware updates must follow proper versioning of application and bootloaders.
 
->`nrfutil` only accepts integer values as versions of bootloader. Therefore each version type is assigned two digits of an integer i.e. 000100 menas 00.01.00 or 0.1.0. Although the trailing zeroes are removed, so it becomes 100 for 0.1.0.
+**NOTE:** *`nrfutil` only accepts integer values as versions of bootloader. Therefore each version type is assigned two digits of an integer i.e. `000100` menas `00.01.00` or `0.1.0`. Although the trailing zeroes are removed, so it becomes `100` for `0.1.0`*
+
+#### Flashing the Bootloader on nrf52840 Dongle
+
+1. Make sure you have downloaded necessary tools and the SDK. You can follow the instructions [here](https://git.slock.it/hardware/crypto-accelerator-benchmarks#pre-requisites)
+2. Make sure the device is connected via the J-Link debugger and that the OS can recognize it.
+3. Create a environment variable that points to the nRF5 SDK folder. `export SDK_ROOT=<PATH_TO_YOUR_SDK_FOLDER>`
+4. Build all the source files using the command: `make`
+5. Flash the `.hex` file onto to the device via `make flash`. This step also generates a settings page with bootloader version as 100.
+6. If the Red LED on the device is blinking then the bootloader flash process was successfull and the device booted directly into the DFU mode becuase there is no application present.
