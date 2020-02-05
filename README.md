@@ -52,7 +52,7 @@ const uint32_t approtect_set __attribute__((section(".ctrlap"))) __attribute__((
 #### Versioning
 The bootloader saves the versions of itself and the application in the Boot Settings Page. This is done to prevent downgrading attacks during the firmware upgrade process. The DFU(Device Firmware Upgrade) feature of the bootloader only accepts a new update if the signed version is greater than the current version. This means that firmware updates must follow proper versioning of application and bootloaders.
 
-**NOTE:** *`nrfutil` only accepts integer values as versions of bootloader. Therefore each version type is assigned two digits of an integer i.e. `000100` menas `00.01.00` or `0.1.0`. Although the trailing zeroes are removed, so it becomes `100` for `0.1.0`*
+**NOTE:** *`nrfutil` only accepts integer values as versions of bootloader. Therefore each version type is assigned two digits of an integer i.e. `000100` menas `00.01.00` or `0.1.0`. Although the leading zeroes are removed, so it becomes `100` for `0.1.0`*
 
 #### Flashing the Bootloader on nrf52840 Dongle
 
