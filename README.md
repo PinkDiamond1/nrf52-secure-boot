@@ -5,7 +5,7 @@ NRF52840's cryptocell implementation provides different accelerators for crypto 
 > The current version of the bootloader supports firmware upgrades via USB. Every update must be signed and versioned properly. The DFU process and firmware signing process is best explained [here](https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.sdk5.v15.0.0%2Flib_bootloader_modules.html). (more on versioning below)
 
 #### Memory mapping and Device Secrets
-![memory](https://git.slock.it/hardware/freertos/nrf52-secure-boot/raw/assets/assets/Memory%20Mapping.png)
+![memory](docs/MemoryMapping.png)
 
 The current version of the bootloader provides two options for device secrets either you can generate your own key and burn it into the device secrets region or a random key can be generated for you. The choice is determined by the first word in the device secrets page whcih is the device secrets flag. When the flag is set to `1` it indicates that the key has been already written into the device secrets page and when it is set to `2` it indicates that a key must be generated and stored onto the flash.
 
@@ -28,7 +28,7 @@ const uint32_t private_key_option __attribute__((section(".device_secrets"))) __
 ```
 
 #### Boot Sequence
-![boot](https://git.slock.it/hardware/freertos/nrf52-secure-boot/raw/assets/assets/Boot%20Sequence.png)
+![boot](docs/BootSequence.png)
 
 The bootloader before intializing write protects the Master Boot Record(MBR) and the Bootloader. Although before protecting the Device Secrets Page it copies the key into the secure RAM of the cryptocell. The cryptocell, technically, does not have any isolated flash or RAM, it has **four 32-bit registers (KDR Registers)** that are referred to as secure RAM. The LCS register is set such that the KDR registers can be written into only once ensuring better security. After the key has been copied the Device Secrets Page is completely protected from reading and writing.
 
